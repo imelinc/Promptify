@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Promptify - v1.1</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta name="color-scheme" content="dark light">
+    <style>
+        :root {
+            --bg: #0b0f14;
+            --bg2: #0d1219;
+            --fg: #f1f5f9;
+            --muted: #9aa4b2;
+            --card: rgba(255, 255, 255, .06);
+            --line: rgba(255, 255, 255, .12);
+            --accent: #66e0ff;
+            --accent-2: #8b5cf6;
+            --ok: #22c55e;
+            --warn: #f97316;
+            --err: #ef4444;
+            --shadow: 0 10px 30px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .04);
+            --radius: 18px
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, Segoe UI, Roboto, Ubuntu, Cantarell, Arial, sans-serif;
+            color: var(--fg);
+            background:
+                radial-gradient(1300px 600px at 10% -10%, #102338 0%, transparent 60%),
+                radial-gradient(900px 500px at 120% 0%, #3b1f64 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+        }
+
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 28px 18px 56px
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(180deg, rgba(11, 15, 20, .9), rgba(11, 15, 20, .6) 70%, transparent);
+            backdrop-filter: blur(8px);
+            z-index: 10
+        }
+
+        .hero {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 22px 0 8px;
+            border-bottom: 1px solid var(--line)
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: conic-gradient(from 200deg at 50% 50%, var(--accent), var(--accent-2), var(--accent));
+            box-shadow: 0 8px 30px rgba(102, 224, 255, .25)
+        }
+
+        h1 {
+            font-size: clamp(22px, 3.2vw, 30px);
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: .2px
+        }
+
+        .sub {
+            margin: 6px 0 0;
+            color: var(--muted)
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 18px 0
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--fg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: .2s transform, .2s box-shadow, .2s background
+        }
+
+        .tab:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow)
+        }
+
+        .tab.active {
+            outline: 2px solid rgba(102, 224, 255, .45);
+            background: linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03))
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow)
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin: 14px 0 6px
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: rgba(15, 18, 24, .8);
+            color: var(--fg);
+            outline: none;
+            transition: border-color .2s, box-shadow .2s
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(102, 224, 255, .12)
+        }
+
+        textarea {
+            min-height: 110px;
+            resize: vertical
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px
+        }
+
+        @media (max-width:820px) {
+            .row {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: rgba(17, 22, 28, .85);
+            color: var(--fg);
+            cursor: pointer;
+            font-weight: 700;
+            letter-spacing: .2px;
+            transition: .2s transform, .2s background, .2s box-shadow
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow)
+        }
+
+        .btn:active {
+            transform: translateY(0)
+        }
+
+        .primary {
+            background: linear-gradient(180deg, var(--accent) 0%, #3ecfff 100%);
+            color: #001018;
+            border-color: transparent
+        }
+
+        .ghost {
+            background: rgba(255, 255, 255, .04)
+        }
+
+        .out {
+            white-space: pre-wrap;
+            background: rgba(12, 16, 22, .75);
+            border: 1px dashed var(--line);
+            padding: 14px;
+            border-radius: 14px
+        }
+
+        .templates {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px
+        }
+
+        .tpl-title {
+            font-weight: 700
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px
+        }
+
+        .footer {
+            margin-top: 24px;
+            color: var(--muted);
+            font-size: 12px;
+            text-align: center
+        }
+
+        .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 6px
+        }
+
+        .pill {
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .05)
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="wrap">
+            <div class="hero">
+                <div class="brand">
+                    <div class="logo" aria-hidden="true"></div>
+                    <div>
+                        <h1>Promptify - v1.1</h1>
+                        <p class="sub">Genera un prompt con tu plantilla exacta o copia plantillas rápidas.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="tabs">
+                <button id="tab-build" class="tab active">Genera tu prompt</button>
+                <button id="tab-templates" class="tab">Plantillas de prompts</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="wrap" style="display:grid; gap:16px">
+        <section id="panel-build" class="card">
+            <h2 style="margin:0 0 6px">Genera tu prompt</h2>
+            <p class="muted" style="margin-top:0">Completa los campos y copia el prompt final.</p>
+
+            <div class="row">
+                <div>
+                    <label for="rol">[ROL O PERFIL DESEADO]</label>
+                    <input id="rol" placeholder="Ej: Analista de datos, Profesor de programación, Redactor técnico"
+                        autocomplete="off" />
+                </div>
+                <div>
+                    <label for="formato">[FORMATO DESEADO]</label>
+                    <input id="formato" placeholder="Ej: lista numerada, informe breve, pasos, JSON, tabla"
+                        autocomplete="off" />
+                </div>
+            </div>
+
+            <label for="tarea">[TAREA ESPECÍFICA]</label>
+            <textarea id="tarea"
+                placeholder="Ej: Explicar un concepto, resumir un artículo, generar casos de prueba, crear un plan de estudio semanal"></textarea>
+
+            <label for="tono">[TONO O ESTILO]</label>
+            <input id="tono" placeholder="Ej: claro y conciso, didáctico, profesional, amigable" autocomplete="off" />
+
+            <label for="contexto">[AGREGA CONTEXTO O EJEMPLOS SI ES NECESARIO]</label>
+            <textarea id="contexto"
+                placeholder="Ejemplos, restricciones, público objetivo, longitud, idioma, criterios de evaluación… (opcional)"></textarea>
+
+            <div class="actions">
+                <button id="btn-build" class="btn primary">Generar prompt</button>
+                <button id="btn-copy" class="btn ghost" disabled>Copiar</button>
+                <button id="btn-clear" class="btn ghost">Limpiar</button>
+            </div>
+
+            <div class="meta" id="meta" style="display:none">
+                <span class="pill" id="charCount">0 caracteres</span>
+                <span class="pill" id="tokenHint">~0–0 tokens aprox.</span>
+            </div>
+
+            <div id="out-wrap" style="margin-top:14px; display:none">
+                <label>Prompt generado</label>
+                <div id="out" class="out"></div>
+            </div>
+        </section>
+
+        <!-- Plantillas -->
+        <section id="panel-templates" class="card" style="display:none">
+            <h2 style="margin:0 0 6px">Plantillas de prompts</h2>
+            <p class="muted" style="margin-top:0">Listas para copiar. Sin personalización.</p>
+            <div class="templates" id="tpl-list"></div>
+        </section>
+
+        <p class="footer">© 2025 – Promptify</p>
+    </main>
+
+    <script>
+        // Navegación
+        const tabBuild = document.getElementById('tab-build');
+        const tabTpl = document.getElementById('tab-templates');
+        const panelBuild = document.getElementById('panel-build');
+        const panelTpl = document.getElementById('panel-templates');
+        function setTab(which) {
+            if (which === 'build') {
+                tabBuild.classList.add('active'); tabTpl.classList.remove('active');
+                panelBuild.style.display = ''; panelTpl.style.display = 'none';
+            } else {
+                tabTpl.classList.add('active'); tabBuild.classList.remove('active');
+                panelTpl.style.display = ''; panelBuild.style.display = 'none';
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        tabBuild.onclick = () => setTab('build');
+        tabTpl.onclick = () => setTab('tpl');
+
+        // Generador
+        const rol = document.getElementById('rol');
+        const tarea = document.getElementById('tarea');
+        const formato = document.getElementById('formato');
+        const tono = document.getElementById('tono');
+        const contexto = document.getElementById('contexto');
+        const btnBuild = document.getElementById('btn-build');
+        const btnCopy = document.getElementById('btn-copy');
+        const btnClear = document.getElementById('btn-clear');
+        const outWrap = document.getElementById('out-wrap');
+        const out = document.getElementById('out');
+        const meta = document.getElementById('meta');
+        const charCount = document.getElementById('charCount');
+        const tokenHint = document.getElementById('tokenHint');
+
+        function toast(btn, text) {
+            const prev = btn.textContent;
+            btn.textContent = text;
+            setTimeout(() => btn.textContent = prev, 1200);
+        }
+
+        function approxTokensFromChars(chars) {
+            // Estimación muy grosera: 1 token ≈ 3–4 caracteres en idiomas latinos
+            const min = Math.ceil(chars / 4);
+            const max = Math.ceil(chars / 3);
+            return { min, max };
+        }
+
+        function buildPrompt() {
+            const R = (rol.value || "").trim();
+            const T = (tarea.value || "").trim();
+            const F = (formato.value || "").trim();
+            const S = (tono.value || "").trim();
+            const C = (contexto.value || "").trim();
+            if (!R || !T || !F || !S) {
+                alert("Completá: ROL, TAREA, FORMATO y TONO. El contexto es opcional.");
+                return null;
+            }
+            let prompt = `Actúa como ${R}.
+Tu tarea es ${T}.
+Provee la respuesta en ${F} y con un tono ${S}.`;
+            if (C) prompt += `\n${C}`;
+            return prompt;
+        }
+
+        function updateCounters(text) {
+            const len = text.length;
+            charCount.textContent = `${len} caracteres`;
+            const { min, max } = approxTokensFromChars(len);
+            tokenHint.textContent = `~${min}–${max} tokens aprox.`;
+        }
+
+        btnBuild.onclick = () => {
+            const p = buildPrompt();
+            if (!p) return;
+            out.textContent = p;
+            outWrap.style.display = '';
+            btnCopy.disabled = false;
+            meta.style.display = '';
+            updateCounters(p);
+        };
+
+        btnCopy.onclick = async () => {
+            try {
+                await navigator.clipboard.writeText(out.textContent);
+                toast(btnCopy, "¡Copiado!");
+            } catch { alert("No se pudo copiar al portapapeles."); }
+        };
+
+        btnClear.onclick = () => {
+            [rol, tarea, formato, tono, contexto].forEach(el => el.value = "");
+            out.textContent = "";
+            outWrap.style.display = 'none';
+            btnCopy.disabled = true;
+            meta.style.display = 'none';
+        };
+
+        // Plantillas rápidas
+        const templates = [
+            `Actúa como Analista de Datos.
+Tu tarea es explorar un CSV y listar 10 preguntas analíticas útiles.
+Provee la respuesta en lista numerada y con un tono profesional.
+Incluye ejemplos de consultas y métricas clave.`,
+
+            `Actúa como Redactor Técnico.
+Tu tarea es resumir un artículo en 5 viñetas y 3 conclusiones accionables.
+Provee la respuesta en lista con títulos en negrita y con un tono claro y conciso.
+Incluye referencias si el texto las aporta.`,
+
+            `Actúa como Profesor de Programación.
+Tu tarea es enseñar recursividad con un ejemplo en Python y ejercicios.
+Provee la respuesta en pasos con código y con un tono didáctico.
+Incluye 3 ejercicios de dificultad creciente.`,
+
+            `Actúa como QA Engineer.
+Tu tarea es diseñar 8 casos de prueba para la función de login.
+Provee la respuesta en tabla y con un tono profesional.
+Incluye precondiciones, pasos, datos de prueba y resultados esperados.`,
+
+            `Actúa como Product Owner.
+Tu tarea es escribir 5 user stories para un módulo de carrito de compras.
+Provee la respuesta en formato "Como <rol> quiero <función> para <beneficio>" y con un tono claro.
+Incluye criterios de aceptación por historia.`,
+
+            `Actúa como Corrector de Estilo.
+Tu tarea es mejorar la claridad de un texto manteniendo su significado.
+Provee la respuesta en dos bloques (Original / Reescritura) y con un tono neutral.
+No cambies datos técnicos ni cifras.`
+        ];
+        const tplList = document.getElementById('tpl-list');
+        templates.forEach((t, i) => {
+            const card = document.createElement('div'); card.className = 'card';
+            const title = document.createElement('div'); title.className = 'tpl-title'; title.textContent = `Plantilla #${i + 1}`;
+            const pre = document.createElement('pre'); pre.className = 'out'; pre.textContent = t;
+            const row = document.createElement('div'); row.style.display = 'flex'; row.style.gap = '10px'; row.style.marginTop = '10px';
+            const btn = document.createElement('button'); btn.className = 'btn ghost'; btn.textContent = 'Copiar';
+            btn.onclick = async () => {
+                try { await navigator.clipboard.writeText(t); toast(btn, '¡Copiado!'); } catch { alert('No se pudo copiar.'); }
+            };
+            row.appendChild(btn);
+            card.appendChild(title); card.appendChild(pre); card.appendChild(row);
+            tplList.appendChild(card);
+        });
+    </script>
+</body>
+
+</html>
