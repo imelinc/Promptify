@@ -21,19 +21,14 @@ def _resp(status, body, origin="*"):
         "body": json.dumps(body, ensure_ascii=False)
     }
 
-def _build_system_prompt():
-    return (
-        "Eres un generador de prompts. Devuelve SOLO el prompt final, claro, "
-        "accionable y conciso, sin explicaciones. No excedas el límite."
-    )
-
-def _safe_trim(text, max_chars=3000):
+def _safe_trim(text, max_chars=4000):
     text = re.sub(r"\s+\n", "\n", text).strip()
     return text[:max_chars]
 
 def lambda_handler(event, context):
     origin = event.get("headers", {}).get("origin") or event.get("headers", {}).get("Origin") or "*"
 
+    # Preflight CORS
     if event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
         return _resp(200, {"ok": True}, origin)
 
@@ -44,54 +39,68 @@ def lambda_handler(event, context):
             body = base64.b64decode(body).decode("utf-8")
         data = json.loads(body)
 
-        # Espera los mismos campos que arma tu frontend:
-        # contexto, indicaciones, lenguaje, uso
-        contexto = data.get("contexto", "")
-        indicaciones = data.get("indicaciones", "No excedas 400 tokens.")
-        lenguaje = data.get("lenguaje", "Español")
-        uso = data.get("uso", "")  # acá podés pasar el prompt armado si quisieras
+        rol = (data.get("rol") or "").strip()
+        tarea = (data.get("tarea") or "").strip()
+        formato = (data.get("formato") or "").strip()
+        tono = (data.get("tono") or "").strip()
+        contexto = (data.get("contexto") or "").strip()
 
-        if not (contexto or uso):
-            return _resp(400, {"error": "Faltan datos. Envía al menos 'contexto' o 'uso'."}, origin)
+        # Validaciones mínimas
+        missing = [k for k, v in {"rol": rol, "tarea": tarea, "formato": formato, "tono": tono}.items() if not v]
+        if missing:
+            return _resp(400, {"error": f"Faltan campos: {', '.join(missing)}"}, origin)
 
-        system_prompt = _build_system_prompt()
+        # 🧠 System: pedir a Haiku que DISEÑE un prompt final (no la respuesta a la tarea)
+        system_msg = (
+            "Eres un DISEÑADOR DE PROMPTS experto. Tu salida debe ser únicamente un PROMPT final "
+            "listo para usar en otro modelo de IA, no una explicación ni la respuesta a la tarea.\n"
+            "Requisitos estrictos:\n"
+            "- Longitud máxima aproximada: 400 tokens.\n"
+            "- Varía la estructura: usa diferentes estilos (secciones, bullets, pasos, mando directo, preguntas guía), "
+            "  evita plantillas rígidas y repetidas.\n"
+            "- Adapta el prompt al rol, tarea, formato y tono dados.\n"
+            "- Si el usuario aportó contexto, úsalo con criterio.\n"
+            "- Evita auto-referencias (no digas 'como IA...'), no agregues comentarios meta, ni notas para el usuario.\n"
+            "- Devuelve SOLO el PROMPT final."
+        )
 
-        # Si 'uso' ya es un prompt armado, lo usamos como mensaje del usuario;
-        # en caso contrario, ensamblamos uno básico con el contexto/indicaciones.
-        user_prompt = uso or f"""
-[OBJETIVO]
-Generar un prompt utilizable por otro modelo.
+        # 🗣️ User: pasamos señales claras, pero dejamos libertad creativa al modelo
+        user_msg = f"""
+Diseña un PROMPT para que otro modelo ejecute la siguiente tarea.
 
-[CONTEXTO]
-{contexto}
+[Rol objetivo] {rol}
+[Tarea específica] {tarea}
+[Formato deseado] {formato}
+[Tono/estilo] {tono}
+[Contexto opcional] {contexto or "N/A"}
 
-[REQUISITOS]
-{indicaciones}
-
-[IDIOMA]
-{lenguaje}
+Lineamientos de calidad:
+- El prompt debe guiar al modelo a producir una salida de alta calidad acorde al formato indicado.
+- Incluye criterios de calidad/verificación si corresponde (p.ej., pasos, validaciones, límites).
+- Propón aclaraciones/preguntas en el prompt solo si son imprescindibles para ejecutar bien la tarea.
+- No excedas ~400 tokens.
 """
-        user_prompt = _safe_trim(user_prompt)
 
         request = {
             "modelId": MODEL_ID,
             "inferenceConfig": {
                 "maxTokens": MAX_TOKENS,
-                "temperature": 0.5,
+                "temperature": 0.7,  # ↑ variación en estilo/estructura
                 "topP": 0.9
             },
             "messages": [
-                {"role": "user", "content": [{"text": user_prompt}]}
+                {"role": "user", "content": [{"text": user_msg}]}
             ],
-            "system": [{"text": system_prompt}],
+            "system": [{"text": system_msg}],
         }
 
         result = bedrock.converse(**request)
         parts = result.get("output", {}).get("message", {}).get("content", [])
         text = "".join(p.get("text", "") for p in parts)
-        text = _safe_trim(text, max_chars=3000)
+        text = _safe_trim(text, max_chars=4000)
 
-        return _resp(200, {"prompt": text}, origin)
+        # Recorte defensivo: si se pasó de largo, acotamos a ~4000 chars (≈ <=400 tokens en promedio)
+        return _resp(200, {"prompt": text})
 
     except Exception as e:
         return _resp(500, {"error": str(e)}, origin)

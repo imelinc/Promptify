@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Promptify - v1.1</title>
+    <title>Promptify - v1.2</title>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <meta name="color-scheme" content="dark light">
@@ -212,6 +212,12 @@
             background: rgba(255, 255, 255, .04)
         }
 
+        .ok {
+            background: linear-gradient(180deg, #4ade80, #22c55e);
+            color: #02150a;
+            border-color: transparent
+        }
+
         .out {
             white-space: pre-wrap;
             background: rgba(12, 16, 22, .75);
@@ -256,6 +262,21 @@
             border: 1px solid var(--line);
             background: rgba(255, 255, 255, .05)
         }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, .25);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
     </style>
 </head>
 
@@ -266,8 +287,8 @@
                 <div class="brand">
                     <div class="logo" aria-hidden="true"></div>
                     <div>
-                        <h1>Promptify - v1.1</h1>
-                        <p class="sub">Genera un prompt con tu plantilla exacta o copia plantillas rápidas.</p>
+                        <h1>Promptify - v1.2</h1>
+                        <p class="sub">Envía tus parámetros y deja que una IA diseñe un prompt único.</p>
                     </div>
                 </div>
             </div>
@@ -279,9 +300,10 @@
     </header>
 
     <main class="wrap" style="display:grid; gap:16px">
+        <!-- Genera con IA -->
         <section id="panel-build" class="card">
-            <h2 style="margin:0 0 6px">Genera tu prompt</h2>
-            <p class="muted" style="margin-top:0">Completa los campos y copia el prompt final.</p>
+            <h2 style="margin:0 0 6px">Genera tu prompt con IA</h2>
+            <p class="muted" style="margin-top:0">Completa los campos y pulsa “Generar con IA”.</p>
 
             <div class="row">
                 <div>
@@ -308,33 +330,34 @@
                 placeholder="Ejemplos, restricciones, público objetivo, longitud, idioma, criterios de evaluación… (opcional)"></textarea>
 
             <div class="actions">
-                <button id="btn-build" class="btn primary">Generar prompt</button>
+                <button id="btn-send" class="btn primary"><span id="sendIcon">Generar con IA</span></button>
                 <button id="btn-copy" class="btn ghost" disabled>Copiar</button>
                 <button id="btn-clear" class="btn ghost">Limpiar</button>
             </div>
 
             <div class="meta" id="meta" style="display:none">
                 <span class="pill" id="charCount">0 caracteres</span>
-                <span class="pill" id="tokenHint">~0–0 tokens aprox.</span>
             </div>
 
             <div id="out-wrap" style="margin-top:14px; display:none">
-                <label>Prompt generado</label>
+                <label>Prompt generado por Bedrock</label>
                 <div id="out" class="out"></div>
             </div>
         </section>
 
-        <!-- Plantillas -->
+        <!-- Plantillas rápidas (para copiar tal cual) -->
         <section id="panel-templates" class="card" style="display:none">
             <h2 style="margin:0 0 6px">Plantillas de prompts</h2>
             <p class="muted" style="margin-top:0">Listas para copiar. Sin personalización.</p>
             <div class="templates" id="tpl-list"></div>
         </section>
 
-        <p class="footer">© 2025 – Promptify</p>
+        <p class="footer">© 2025 – Promptify - v1.2</p>
     </main>
 
     <script>
+        const API_URL = "https://d1r8xocqdk.execute-api.us-east-1.amazonaws.com";
+
         // Navegación
         const tabBuild = document.getElementById('tab-build');
         const tabTpl = document.getElementById('tab-templates');
@@ -353,20 +376,20 @@
         tabBuild.onclick = () => setTab('build');
         tabTpl.onclick = () => setTab('tpl');
 
-        // Generador
+        // UI
         const rol = document.getElementById('rol');
         const tarea = document.getElementById('tarea');
         const formato = document.getElementById('formato');
         const tono = document.getElementById('tono');
         const contexto = document.getElementById('contexto');
-        const btnBuild = document.getElementById('btn-build');
+        const btnSend = document.getElementById('btn-send');
         const btnCopy = document.getElementById('btn-copy');
         const btnClear = document.getElementById('btn-clear');
         const outWrap = document.getElementById('out-wrap');
         const out = document.getElementById('out');
         const meta = document.getElementById('meta');
         const charCount = document.getElementById('charCount');
-        const tokenHint = document.getElementById('tokenHint');
+        const sendIcon = document.getElementById('sendIcon');
 
         function toast(btn, text) {
             const prev = btn.textContent;
@@ -374,53 +397,9 @@
             setTimeout(() => btn.textContent = prev, 1200);
         }
 
-        function approxTokensFromChars(chars) {
-            // Estimación muy grosera: 1 token ≈ 3–4 caracteres en idiomas latinos
-            const min = Math.ceil(chars / 4);
-            const max = Math.ceil(chars / 3);
-            return { min, max };
-        }
-
-        function buildPrompt() {
-            const R = (rol.value || "").trim();
-            const T = (tarea.value || "").trim();
-            const F = (formato.value || "").trim();
-            const S = (tono.value || "").trim();
-            const C = (contexto.value || "").trim();
-            if (!R || !T || !F || !S) {
-                alert("Completá: ROL, TAREA, FORMATO y TONO. El contexto es opcional.");
-                return null;
-            }
-            let prompt = `Actúa como ${R}.
-Tu tarea es ${T}.
-Provee la respuesta en ${F} y con un tono ${S}.`;
-            if (C) prompt += `\n${C}`;
-            return prompt;
-        }
-
         function updateCounters(text) {
-            const len = text.length;
-            charCount.textContent = `${len} caracteres`;
-            const { min, max } = approxTokensFromChars(len);
-            tokenHint.textContent = `~${min}–${max} tokens aprox.`;
+            charCount.textContent = `${text.length} caracteres`;
         }
-
-        btnBuild.onclick = () => {
-            const p = buildPrompt();
-            if (!p) return;
-            out.textContent = p;
-            outWrap.style.display = '';
-            btnCopy.disabled = false;
-            meta.style.display = '';
-            updateCounters(p);
-        };
-
-        btnCopy.onclick = async () => {
-            try {
-                await navigator.clipboard.writeText(out.textContent);
-                toast(btnCopy, "¡Copiado!");
-            } catch { alert("No se pudo copiar al portapapeles."); }
-        };
 
         btnClear.onclick = () => {
             [rol, tarea, formato, tono, contexto].forEach(el => el.value = "");
@@ -430,7 +409,59 @@ Provee la respuesta en ${F} y con un tono ${S}.`;
             meta.style.display = 'none';
         };
 
-        // Plantillas rápidas
+        btnCopy.onclick = async () => {
+            try { await navigator.clipboard.writeText(out.textContent); toast(btnCopy, "¡Copiado!"); }
+            catch { alert("No se pudo copiar al portapapeles."); }
+        };
+
+        btnSend.onclick = async () => {
+            if (!API_URL || API_URL.includes("PEGAR_AQUI")) { alert("Pega tu Invoke URL en API_URL."); return; }
+
+            const payload = {
+                rol: (rol.value || "").trim(),
+                tarea: (tarea.value || "").trim(),
+                formato: (formato.value || "").trim(),
+                tono: (tono.value || "").trim(),
+                contexto: (contexto.value || "").trim()
+            };
+
+            if (!payload.rol || !payload.tarea || !payload.formato || !payload.tono) {
+                alert("Completá: ROL, TAREA, FORMATO y TONO. El contexto es opcional.");
+                return;
+            }
+
+            btnSend.disabled = true;
+            sendIcon.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
+            outWrap.style.display = 'none';
+            out.textContent = "";
+            meta.style.display = 'none';
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(`Error ${res.status}: ${txt}`);
+                }
+                const data = await res.json();
+                const text = data.prompt || JSON.stringify(data);
+                out.textContent = text;
+                outWrap.style.display = '';
+                btnCopy.disabled = false;
+                meta.style.display = '';
+                updateCounters(text);
+            } catch (e) {
+                alert("Hubo un error llamando a la API: " + e.message);
+            } finally {
+                btnSend.disabled = false;
+                sendIcon.textContent = "Generar con IA";
+            }
+        };
+
+        // Plantillas rápidas (opcional, para copiar tal cual)
         const templates = [
             `Actúa como Analista de Datos.
 Tu tarea es explorar un CSV y listar 10 preguntas analíticas útiles.
@@ -445,22 +476,7 @@ Incluye referencias si el texto las aporta.`,
             `Actúa como Profesor de Programación.
 Tu tarea es enseñar recursividad con un ejemplo en Python y ejercicios.
 Provee la respuesta en pasos con código y con un tono didáctico.
-Incluye 3 ejercicios de dificultad creciente.`,
-
-            `Actúa como QA Engineer.
-Tu tarea es diseñar 8 casos de prueba para la función de login.
-Provee la respuesta en tabla y con un tono profesional.
-Incluye precondiciones, pasos, datos de prueba y resultados esperados.`,
-
-            `Actúa como Product Owner.
-Tu tarea es escribir 5 user stories para un módulo de carrito de compras.
-Provee la respuesta en formato "Como <rol> quiero <función> para <beneficio>" y con un tono claro.
-Incluye criterios de aceptación por historia.`,
-
-            `Actúa como Corrector de Estilo.
-Tu tarea es mejorar la claridad de un texto manteniendo su significado.
-Provee la respuesta en dos bloques (Original / Reescritura) y con un tono neutral.
-No cambies datos técnicos ni cifras.`
+Incluye 3 ejercicios de dificultad creciente.`
         ];
         const tplList = document.getElementById('tpl-list');
         templates.forEach((t, i) => {
