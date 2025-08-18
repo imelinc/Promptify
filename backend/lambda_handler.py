@@ -10,7 +10,7 @@ MAX_TOK  = int(os.environ.get("MAX_TOKENS", "400"))
 bedrock = boto3.client("bedrock-runtime", region_name=REGION)
 
 ALLOWED_ORIGINS = {
-    "https://d24e3kao48qx0i.cloudfront.net"
+    "https://d24e3kao48qx0i.cloudfront.net",  # CloudFront
 }
 
 def _allow_origin(origin):
@@ -48,19 +48,18 @@ def lambda_handler(event, context):
 
         rol      = (data.get("rol") or "").strip()
         tarea    = (data.get("tarea") or "").strip()
-        formato  = (data.get("formato") or "").trim()
+        formato  = (data.get("formato") or "").strip()   # ← FIX
         tono     = (data.get("tono") or "").strip()
         contexto = (data.get("contexto") or "").strip()
 
-        # validación
         missing = [k for k,v in {"rol":rol,"tarea":tarea,"formato":formato,"tono":tono}.items() if not v]
         if missing:
             logging.warning(f"Campos faltantes: {missing}")
             return _resp(400, {"error": f"Faltan campos: {', '.join(missing)}"}, origin)
 
         system_msg = (
-            "Eres un DISEÑADOR DE PROMPTS experto. Devuelve SOLO un PROMPT final listo para otro modelo."
-            " Sé creativo en estructura (no plantilla fija). Máximo ~400 tokens. Sin explicaciones."
+            "Eres un DISEÑADOR DE PROMPTS experto. Devuelve SOLO un PROMPT final listo para otro modelo. "
+            "Sé creativo en la estructura (no plantilla fija). Máximo ~400 tokens. Sin explicaciones."
         )
 
         user_msg = f"""
@@ -73,18 +72,11 @@ Diseña un PROMPT para que otro modelo ejecute la tarea.
 [Contexto opcional] {contexto or "N/A"}
 """
 
-        # >>>>>> SCHEMA CORRECTO PARA CONVERSE <<<<<<
         request = {
             "modelId": MODEL_ID,
-            "inferenceConfig": {
-                "maxTokens": MAX_TOK,
-                "temperature": 0.7,
-                "topP": 0.9
-            },
-            "system": [{"text": system_msg}],                 # System acepta bloques de texto
-            "messages": [
-                {"role": "user", "content": [{"type":"text", "text": user_msg}]}
-            ]
+            "inferenceConfig": {"maxTokens": MAX_TOK, "temperature": 0.7, "topP": 0.9},
+            "system":   [{"text": system_msg}],
+            "messages": [{"role":"user","content":[{"type":"text","text": user_msg}]}]
         }
 
         logging.info(f"Invocando Bedrock model={MODEL_ID}")
@@ -101,5 +93,4 @@ Diseña un PROMPT para que otro modelo ejecute la tarea.
 
     except Exception as e:
         logging.exception("Error en Lambda")
-        # Devolver detalle mínimo para depurar sin exponer stack completo al cliente
         return _resp(500, {"error": "lambda_error", "detail": str(e)}, origin)
