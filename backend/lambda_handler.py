@@ -36,7 +36,7 @@ def _safe_trim(text, max_chars=4000):
 def lambda_handler(event, context):
     origin = (event.get("headers") or {}).get("origin") or (event.get("headers") or {}).get("Origin") or "*"
 
-    # Preflight
+    # Preflight CORS
     if event.get("requestContext", {}).get("http", {}).get("method") == "OPTIONS":
         return _resp(200, {"ok": True}, origin)
 
@@ -48,13 +48,12 @@ def lambda_handler(event, context):
 
         rol      = (data.get("rol") or "").strip()
         tarea    = (data.get("tarea") or "").strip()
-        formato  = (data.get("formato") or "").strip()   # ← FIX
+        formato  = (data.get("formato") or "").strip()
         tono     = (data.get("tono") or "").strip()
         contexto = (data.get("contexto") or "").strip()
 
         missing = [k for k,v in {"rol":rol,"tarea":tarea,"formato":formato,"tono":tono}.items() if not v]
         if missing:
-            logging.warning(f"Campos faltantes: {missing}")
             return _resp(400, {"error": f"Faltan campos: {', '.join(missing)}"}, origin)
 
         system_msg = (
@@ -76,17 +75,15 @@ Diseña un PROMPT para que otro modelo ejecute la tarea.
             "modelId": MODEL_ID,
             "inferenceConfig": {"maxTokens": MAX_TOK, "temperature": 0.7, "topP": 0.9},
             "system":   [{"text": system_msg}],
-            "messages": [{"role":"user","content":[{"type":"text","text": user_msg}]}]
+            "messages": [{"role": "user", "content": [ {"text": user_msg} ]}]
         }
 
-        logging.info(f"Invocando Bedrock model={MODEL_ID}")
         result = bedrock.converse(**request)
         parts = result.get("output", {}).get("message", {}).get("content", [])
         text  = "".join(p.get("text","") for p in parts)
         text  = _safe_trim(text, max_chars=4000)
 
         if not text:
-            logging.error(f"Respuesta vacía de Bedrock: {json.dumps(result, default=str)[:1000]}")
             return _resp(502, {"error":"Respuesta vacía del modelo"}, origin)
 
         return _resp(200, {"prompt": text}, origin)
