@@ -1,0 +1,67 @@
+# ----------------------
+# Node / Frontend
+# ----------------------
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# ----------------------
+# Python / Lambda
+# ----------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+.eggs/
+.env
+.venv/
+venv/
+ENV/
+env.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtualenv / pipenv
+Pipfile.lock
+
+# ----------------------
+# AWS / Config
+# ----------------------
+*.tfstate
+*.tfstate.backup
+.aws/
+*.pem
+*.key
+.env.local
+.env.production
+.env.development
+credentials.json
+
+# SAM / CDK / Serverless
+.aws-sam/
+.cdk.out/
+.serverless/
+
+# ----------------------
+# IDE / Editor
+# ----------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ----------------------
+# Other
+# ----------------------
+coverage/
+.cache/
